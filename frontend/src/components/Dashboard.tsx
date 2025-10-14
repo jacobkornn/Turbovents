@@ -27,9 +27,21 @@ export default function Dashboard() {
   }, [token]);
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f7', padding: '2rem' }}>
+    <div style={{
+      width: '100vw',
+      height: '100vh',
+      backgroundColor: '#f9f9f9',
+      padding: '2rem',
+      boxSizing: 'border-box',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif'
+    }}>
       {/* Filter Bar */}
-      <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
+      <div style={{
+        display: 'flex',
+        gap: '1rem',
+        marginBottom: '2rem',
+        fontFamily: 'inherit'
+      }}>
         <select
           value={filterStatus}
           onChange={e => setFilterStatus(e.target.value)}
@@ -39,6 +51,7 @@ export default function Dashboard() {
             border: '1px solid #ccc',
             backgroundColor: 'white',
             fontSize: '1rem',
+            fontFamily: 'inherit'
           }}
         >
           <option value="">All Statuses</option>
@@ -59,15 +72,28 @@ export default function Dashboard() {
             backgroundColor: 'white',
             fontSize: '1rem',
             flex: 1,
+            fontFamily: 'inherit'
           }}
         />
       </div>
 
       {/* Task Columns */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2rem' }}>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(3, 1fr)',
+        gap: '2rem',
+        fontFamily: 'inherit'
+      }}>
         {statuses.map(status => (
           <div key={status}>
-            <h3 style={{ marginBottom: '1rem', fontSize: '1.25rem' }}>{status}</h3>
+            <h3 style={{
+              marginBottom: '1rem',
+              fontSize: '1.25rem',
+              fontWeight: 600,
+              fontFamily: 'inherit'
+            }}>
+              {status}
+            </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {tasks
                 .filter(task => task.status === status)
@@ -82,10 +108,22 @@ export default function Dashboard() {
                       borderRadius: '16px',
                       boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
                       padding: '1rem',
+                      fontFamily: 'inherit'
                     }}
                   >
-                    <h4 style={{ marginBottom: '0.5rem', fontSize: '1rem' }}>{task.title}</h4>
-                    <p style={{ fontSize: '0.875rem', color: '#555' }}>
+                    <h4 style={{
+                      marginBottom: '0.5rem',
+                      fontSize: '1rem',
+                      fontWeight: 500,
+                      fontFamily: 'inherit'
+                    }}>
+                      {task.title}
+                    </h4>
+                    <p style={{
+                      fontSize: '0.875rem',
+                      color: '#555',
+                      fontFamily: 'inherit'
+                    }}>
                       Assigned to: {task.assignedTo?.username || 'Unassigned'}
                     </p>
                   </div>

@@ -52,11 +52,12 @@ export default function LoginScreen({ setToken }: LoginScreenProps) {
 
   return (
     <div style={{
-      minHeight: '100vh',
+      width: '100vw',
+      height: '100vh',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: '#f5f5f7',
+      backgroundColor: '#f9f9f9',
       fontFamily: '-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, sans-serif'
     }}>
       <div style={{
@@ -65,9 +66,18 @@ export default function LoginScreen({ setToken }: LoginScreenProps) {
         padding: '2rem',
         backgroundColor: 'white',
         borderRadius: '20px',
-        boxShadow: '0 8px 24px rgba(0,0,0,0.08)'
+        boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
+        fontFamily: 'inherit'
       }}>
-        <h2 style={{ marginBottom: '1.5rem', textAlign: 'center', fontSize: '1.5rem' }}>Sign In</h2>
+        <h2 style={{
+          marginBottom: '1.5rem',
+          textAlign: 'center',
+          fontSize: '1.5rem',
+          fontWeight: 600,
+          fontFamily: 'inherit'
+        }}>
+          Sign In
+        </h2>
         <input
           placeholder="Username"
           value={username}
@@ -79,7 +89,8 @@ export default function LoginScreen({ setToken }: LoginScreenProps) {
             borderRadius: '12px',
             border: '1px solid #ccc',
             outline: 'none',
-            fontSize: '1rem'
+            fontSize: '1rem',
+            fontFamily: 'inherit'
           }}
         />
         <input
@@ -94,7 +105,8 @@ export default function LoginScreen({ setToken }: LoginScreenProps) {
             borderRadius: '12px',
             border: '1px solid #ccc',
             outline: 'none',
-            fontSize: '1rem'
+            fontSize: '1rem',
+            fontFamily: 'inherit'
           }}
         />
         <button
@@ -107,7 +119,8 @@ export default function LoginScreen({ setToken }: LoginScreenProps) {
             border: 'none',
             borderRadius: '12px',
             fontSize: '1rem',
-            cursor: 'pointer'
+            cursor: 'pointer',
+            fontFamily: 'inherit'
           }}
         >
           Login
@@ -121,7 +134,8 @@ export default function LoginScreen({ setToken }: LoginScreenProps) {
                 backgroundColor: '#f0f0f0',
                 padding: '0.5rem',
                 borderRadius: '8px',
-                fontSize: '0.85rem'
+                fontSize: '0.85rem',
+                fontFamily: 'inherit'
               }}>{token}</pre>
             </div>
             <button
@@ -135,7 +149,8 @@ export default function LoginScreen({ setToken }: LoginScreenProps) {
                 border: 'none',
                 borderRadius: '12px',
                 fontSize: '1rem',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                fontFamily: 'inherit'
               }}
             >
               Check Profile
@@ -149,7 +164,7 @@ export default function LoginScreen({ setToken }: LoginScreenProps) {
             <strong>Role:</strong> {profile.role}<br />
             {profile.role === 'admin' && (
               <div style={{ marginTop: '1rem', color: 'green' }}>
-                ✅ You have admin privileges.
+                You have admin privileges.
                 <br />
                 <button
                   onClick={handleLoadUsers}
@@ -162,7 +177,8 @@ export default function LoginScreen({ setToken }: LoginScreenProps) {
                     border: 'none',
                     borderRadius: '12px',
                     fontSize: '1rem',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    fontFamily: 'inherit'
                   }}
                 >
                   Load All Users
@@ -174,8 +190,13 @@ export default function LoginScreen({ setToken }: LoginScreenProps) {
 
         {users.length > 0 && (
           <div style={{ marginTop: '2rem' }}>
-            <h3 style={{ marginBottom: '0.5rem' }}>User List</h3>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <h3 style={{
+              marginBottom: '0.5rem',
+              fontFamily: 'inherit'
+            }}>
+              User List
+            </h3>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'inherit' }}>
               <thead>
                 <tr>
                   <th style={{ textAlign: 'left', padding: '0.5rem' }}>ID</th>

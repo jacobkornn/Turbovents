@@ -7,10 +7,19 @@ function App() {
   const [, setToken] = useState('');
 
   return (
-    <Routes>
-      <Route path="/" element={<LoginScreen setToken={setToken} />} />
-      <Route path="/dashboard" element={<Dashboard />} />
-    </Routes>
+    <div style={{
+      width: '100vw',
+      height: '100vh',
+      backgroundColor: '#f9f9f9',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center'
+    }}>
+      <Routes>
+        <Route path="/" element={<LoginScreen setToken={setToken} />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+      </Routes>
+    </div>
   );
 }
 

@@ -47,6 +47,7 @@
     "@types/bcrypt": "^6.0.0",
     "@types/jest": "^30.0.0",
     "@types/node": "20.19.9",
+    "@vitejs/plugin-react": "^5.0.4",
     "concurrently": "^9.2.1",
     "eslint": "^9.8.0",
     "eslint-config-prettier": "^10.0.0",
