@@ -9,7 +9,7 @@ import { ProfileController } from './profile.controller';
 import { JwtStrategy } from './jwt.strategy';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
-import { UsersService } from '../users/users.service';
+import { UsersService } from '../user/users.service';
 
 @Module({
   imports: [
