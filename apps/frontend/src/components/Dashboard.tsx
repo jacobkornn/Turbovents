@@ -250,52 +250,123 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Board */}
-      <div
+{/* Board */}
+<div
+  style={{
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gap: '1.5rem',
+  }}
+>
+  {STATUSES.map(status => (
+    <div key={status}>
+      <h3
         style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: '1.5rem',
+          textAlign: 'center',
+          marginBottom: '0.75rem',
+          fontSize: '1.15rem',
+          fontWeight: 600,
         }}
       >
-        {STATUSES.map(status => (
-          <div key={status}>
-            <h3
+        {status}
+      </h3>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        {/* Drafts */}
+        {drafts
+          .filter(d => d.status === status)
+          .map(draft => (
+            <div
+              key={draft.id}
               style={{
-                textAlign: 'center',
-                marginBottom: '0.75rem',
-                fontSize: '1.15rem',
-                fontWeight: 600,
+                backgroundColor: 'white',
+                borderRadius: '16px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
+                padding: '0.9rem',
               }}
             >
-              {status}
-            </h3>
+              <input
+                value={draft.title}
+                onChange={e => updateDraft(draft.id, { title: e.target.value })}
+                placeholder="Enter task title..."
+                style={{ ...selectStyle, backgroundColor: '#f2f2f7' }}
+              />
+              <select
+                value={draft.status}
+                onChange={e =>
+                  updateDraft(draft.id, { status: e.target.value as Draft['status'] })
+                }
+                style={selectStyle}
+              >
+                {STATUSES.map(s => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+              {isAdmin && (
+                <select
+                  value={draft.assignedToId ?? ''}
+                  onChange={e =>
+                    updateDraft(draft.id, {
+                      assignedToId: e.target.value ? +e.target.value : undefined,
+                    })
+                  }
+                  style={selectStyle}
+                >
+                  <option value="">Unassigned</option>
+                  {users.map(u => (
+                    <option key={u.id} value={u.id}>
+                      {u.username}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          ))}
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {/* Drafts */}
-              {drafts
-                .filter(d => d.status === status)
-                .map(draft => (
-                  <div
-                    key={draft.id}
-                    style={{
-                      backgroundColor: 'white',
-                      borderRadius: '16px',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
-                      padding: '0.9rem',
-                    }}
-                  >
-                    <input
-                      value={draft.title}
-                      onChange={e => updateDraft(draft.id, { title: e.target.value })}
-                      placeholder="Enter task title..."
-                      style={{ ...selectStyle, backgroundColor: '#f2f2f7' }}
-                    />
+        {/* Existing Tasks */}
+        {filteredTasks
+          .filter(t => t.status === status)
+          .map(task => (
+            <div
+              key={task.id}
+              style={{
+                backgroundColor: 'white',
+                borderRadius: '16px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
+                padding: '0.9rem',
+              }}
+              onDoubleClick={() => {
+                setEditingTaskId(task.id);
+                setEditingTitle(task.title);
+                setEditingStatus(task.status);
+                setEditingAssignedToId(task.assignedTo?.id);
+              }}
+            >
+              {editingTaskId === task.id ? (
+                <div
+                  style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}
+                  tabIndex={0}
+                  onBlur={(e) => {
+                    // Only blur when focus leaves the entire edit block
+                    const next = e.relatedTarget;
+                    if (!next || !e.currentTarget.contains(next as Node)) {
+                      handleEditBlur(task);
+                    }
+                  }}
+                >
+                  <input
+                    type="text"
+                    value={editingTitle}
+                    onChange={e => handleEditChange(task.id, e.target.value)}
+                    autoFocus
+                    style={{ ...selectStyle, backgroundColor: '#f2f2f7' }}
+                  />
+                  {isAdmin || task.assignedTo?.id === user?.id ? (
                     <select
-                      value={draft.status}
-                      onChange={e =>
-                        updateDraft(draft.id, { status: e.target.value as Draft['status'] })
-                      }
+                      value={editingStatus}
+                      onChange={e => setEditingStatus(e.target.value as Task['status'])}
                       style={selectStyle}
                     >
                       {STATUSES.map(s => (
@@ -304,109 +375,47 @@ export default function Dashboard() {
                         </option>
                       ))}
                     </select>
-                    {isAdmin && (
-                      <select
-                        value={draft.assignedToId ?? ''}
-                        onChange={e =>
-                          updateDraft(draft.id, {
-                            assignedToId: e.target.value ? +e.target.value : undefined,
-                          })
-                        }
-                        style={selectStyle}
-                      >
-                        <option value="">Unassigned</option>
-                        {users.map(u => (
-                          <option key={u.id} value={u.id}>
-                            {u.username}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                  </div>
-                ))}
-
-              {/* Existing Tasks */}
-              {filteredTasks
-                .filter(t => t.status === status)
-                .map(task => (
-                  <div
-                    key={task.id}
-                    style={{
-                      backgroundColor: 'white',
-                      borderRadius: '16px',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
-                      padding: '0.9rem',
-                    }}
-                    onDoubleClick={() => {
-                      setEditingTaskId(task.id);
-                      setEditingTitle(task.title);
-                      setEditingStatus(task.status);
-                      setEditingAssignedToId(task.assignedTo?.id);
-                    }}
-                  >
-                    {editingTaskId === task.id ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                        <input
-                          type="text"
-                          value={editingTitle}
-                          onChange={e => handleEditChange(task.id, e.target.value)}
-                          onBlur={() => handleEditBlur(task)}
-                          autoFocus
-                          style={{ ...selectStyle, backgroundColor: '#f2f2f7' }}
-                        />
-                        {isAdmin || task.assignedTo?.id === user?.id ? (
-                          <select
-                            value={editingStatus}
-                            onChange={e => setEditingStatus(e.target.value as Task['status'])}
-                            style={selectStyle}
-                          >
-                            {STATUSES.map(s => (
-                              <option key={s} value={s}>
-                                {s}
-                              </option>
-                            ))}
-                          </select>
-                        ) : (
-                          <p>Status: {task.status}</p>
-                        )}
-                        {isAdmin ? (
-                          <select
-                            value={editingAssignedToId ?? ''}
-                            onChange={e =>
-                              setEditingAssignedToId(
-                                e.target.value ? +e.target.value : undefined,
-                              )
-                            }
-                            style={selectStyle}
-                          >
-                            <option value="">Unassigned</option>
-                            {users.map(u => (
-                              <option key={u.id} value={u.id}>
-                                {u.username}
-                              </option>
-                            ))}
-                          </select>
-                        ) : (
-                          <p>Assigned to: {task.assignedTo?.username ?? 'Unassigned'}</p>
-                        )}
-                      </div>
-                    ) : (
-                      <>
-                        <h4 style={{ marginBottom: '0.4rem', fontSize: '1rem' }}>
-                          {task.title}
-                        </h4>
-                        <p>Status: {task.status}</p>
-                        <p>Assigned to: {task.assignedTo?.username ?? 'Unassigned'}</p>
-                      </>
-                    )}
-                  </div>
-                ))}
+                  ) : (
+                    <p>Status: {task.status}</p>
+                  )}
+                  {isAdmin ? (
+                    <select
+                      value={editingAssignedToId ?? ''}
+                      onChange={e =>
+                        setEditingAssignedToId(
+                          e.target.value ? +e.target.value : undefined,
+                        )
+                      }
+                      style={selectStyle}
+                    >
+                      <option value="">Unassigned</option>
+                      {users.map(u => (
+                        <option key={u.id} value={u.id}>
+                          {u.username}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <p>Assigned to: {task.assignedTo?.username ?? 'Unassigned'}</p>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <h4 style={{ marginBottom: '0.4rem', fontSize: '1rem' }}>
+                    {task.title}
+                  </h4>
+                  <p>Status: {task.status}</p>
+                  <p>Assigned to: {task.assignedTo?.username ?? 'Unassigned'}</p>
+                </>
+              )}
             </div>
-          </div>
-        ))}
+          ))}
       </div>
     </div>
-  );
+  ))}
+</div>
+</div>
+);
 }
 
 // Utility for draft IDs

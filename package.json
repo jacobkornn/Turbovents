@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
-    "start": "concurrently \"npx nx serve api\" \"npm --prefix frontend run dev\""
+    "start": "concurrently \"npx nx serve api\" \"npm --prefix apps/frontend run dev\""
   },
   "private": true,
   "dependencies": {
