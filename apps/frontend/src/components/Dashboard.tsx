@@ -31,7 +31,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
 
   // Normalize admin check
-  const isAdmin = user?.role?.toLowerCase() === 'admin';
+  const isPrivileged = ['admin', 'owner'].includes((user?.role ?? '').toLowerCase());
 
   // Shared style for all selects
   const selectStyle = {
@@ -112,7 +112,7 @@ export default function Dashboard() {
     const toSave = drafts.filter(d => d.title.trim());
     for (const d of toSave) {
       const p: any = { title: d.title.trim(), status: d.status };
-      if (isAdmin && d.assignedToId) p.assignedTo = d.assignedToId;
+      if (isPrivileged && d.assignedToId) p.assignedTo = d.assignedToId;
       await fetch('http://localhost:3000/api/tasks', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -144,7 +144,7 @@ export default function Dashboard() {
 
   const canEditStatus = (task: Task) => {
     const isOwner = task.assignedTo?.id === user?.id;
-    return isAdmin || isOwner;
+    return isPrivileged || isOwner;
   };
 
   const handleEditBlur = async (task: Task) => {
@@ -156,7 +156,7 @@ export default function Dashboard() {
       body: JSON.stringify({
         title: editingTitle,
         status: canEditStatus(task) ? editingStatus : task.status,
-        ...(isAdmin && editingAssignedToId != null
+        ...(isPrivileged && editingAssignedToId != null
           ? { assignedToId: editingAssignedToId }
           : {}),
       }),
@@ -304,7 +304,7 @@ export default function Dashboard() {
                   </option>
                 ))}
               </select>
-              {isAdmin && (
+              {isPrivileged && (
                 <select
                   value={draft.assignedToId ?? ''}
                   onChange={e =>
@@ -363,7 +363,7 @@ export default function Dashboard() {
                     autoFocus
                     style={{ ...selectStyle, backgroundColor: '#f2f2f7' }}
                   />
-                  {isAdmin || task.assignedTo?.id === user?.id ? (
+                  {isPrivileged || task.assignedTo?.id === user?.id ? (
                     <select
                       value={editingStatus}
                       onChange={e => setEditingStatus(e.target.value as Task['status'])}
@@ -378,7 +378,7 @@ export default function Dashboard() {
                   ) : (
                     <p>Status: {task.status}</p>
                   )}
-                  {isAdmin ? (
+                  {isPrivileged ? (
                     <select
                       value={editingAssignedToId ?? ''}
                       onChange={e =>

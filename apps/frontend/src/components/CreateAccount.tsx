@@ -5,28 +5,37 @@ export default function CreateAccount() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
-  const [error, setError] = useState('');
+  const [notification, setNotification] = useState<{ text: string; type: 'error' | 'success' } | null>(null);
   const navigate = useNavigate();
 
   const handleCreate = async () => {
     if (password !== confirm) {
-      setError('Passwords do not match');
+      setNotification({ text: 'Passwords do not match', type: 'error' });
       return;
     }
 
-    const res = await fetch('http://localhost:3000/api/users', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
-    });
+    try {
+      const res = await fetch('http://localhost:3000/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
 
-    if (!res.ok) {
-      const data = await res.json();
-      setError(data.message || 'Account creation failed');
-      return;
+      if (!res.ok) {
+        const data = await res.json();
+        if (data.message?.includes('exists')) {
+          setNotification({ text: 'Username already exists', type: 'error' });
+        } else {
+          setNotification({ text: 'Account creation failed', type: 'error' });
+        }
+        return;
+      }
+
+      // ✅ Success → Redirect to Login with success banner
+      navigate('/', { state: { fromSignup: true } });
+    } catch {
+      setNotification({ text: 'Network error. Please try again.', type: 'error' });
     }
-
-    navigate('/');
   };
 
   return (
@@ -41,8 +50,14 @@ export default function CreateAccount() {
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
+        position: 'relative',
       }}
     >
+      {/* 🔔 Notification Banner */}
+      {notification && (
+        <div className={`notification ${notification.type}`}>{notification.text}</div>
+      )}
+
       <div
         style={{
           width: '100%',
@@ -69,7 +84,7 @@ export default function CreateAccount() {
         <input
           placeholder="Username"
           value={username}
-          onChange={e => setUsername(e.target.value)}
+          onChange={(e) => setUsername(e.target.value)}
           style={{
             width: '100%',
             marginBottom: '1rem',
@@ -81,11 +96,12 @@ export default function CreateAccount() {
             fontFamily: 'inherit',
           }}
         />
+
         <input
           placeholder="Password"
           type="password"
           value={password}
-          onChange={e => setPassword(e.target.value)}
+          onChange={(e) => setPassword(e.target.value)}
           style={{
             width: '100%',
             marginBottom: '1rem',
@@ -97,11 +113,12 @@ export default function CreateAccount() {
             fontFamily: 'inherit',
           }}
         />
+
         <input
           placeholder="Confirm Password"
           type="password"
           value={confirm}
-          onChange={e => setConfirm(e.target.value)}
+          onChange={(e) => setConfirm(e.target.value)}
           style={{
             width: '100%',
             marginBottom: '1.5rem',
@@ -113,12 +130,6 @@ export default function CreateAccount() {
             fontFamily: 'inherit',
           }}
         />
-
-        {error && (
-          <div style={{ color: 'red', marginBottom: '1rem', fontSize: '0.9rem' }}>
-            {error}
-          </div>
-        )}
 
         <button
           onClick={handleCreate}

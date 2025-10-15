@@ -34,11 +34,17 @@ export class UsersService {
 
     const hashedPassword = await bcrypt.hash(user.password, 10);
 
+    const roleLower = user.role?.toLowerCase();
     const newUser = this.userRepo.create({
       username: user.username,
       password: hashedPassword,
-      // force default to viewer unless explicitly admin
-      role: user.role?.toLowerCase() === 'admin' ? UserRole.ADMIN : UserRole.VIEWER,
+      // force default to viewer unless explicitly admin or owner
+      role:
+        roleLower === 'owner'
+          ? UserRole.OWNER
+          : roleLower === 'admin'
+          ? UserRole.ADMIN
+          : UserRole.VIEWER,
     });
 
     const saved = await this.userRepo.save(newUser);
@@ -49,9 +55,15 @@ export class UsersService {
     const user = await this.userRepo.findOne({ where: { id } });
     if (!user) throw new BadRequestException('User not found');
 
-    user.role = role?.toLowerCase() === 'admin' ? UserRole.ADMIN : UserRole.VIEWER;
-    const saved = await this.userRepo.save(user);
+    const roleLower = role?.toLowerCase();
+    user.role =
+      roleLower === 'owner'
+        ? UserRole.OWNER
+        : roleLower === 'admin'
+        ? UserRole.ADMIN
+        : UserRole.VIEWER;
 
+    const saved = await this.userRepo.save(user);
     return { id: saved.id, username: saved.username, role: saved.role };
   }
 }

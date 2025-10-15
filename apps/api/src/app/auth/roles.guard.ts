@@ -10,6 +10,19 @@ export class RolesGuard implements CanActivate {
     if (!requiredRoles) return true;
 
     const { user } = context.switchToHttp().getRequest();
-    return requiredRoles.includes(user.role);
+    if (!user?.role) return false;
+
+    // Define hierarchy (higher number = more privileges)
+    const hierarchy: Record<string, number> = {
+      viewer: 1,
+      admin: 2,
+      owner: 3,
+    };
+
+    const userRank = hierarchy[user.role.toLowerCase()] ?? 0;
+
+    return requiredRoles.some(
+      (role) => userRank >= (hierarchy[role.toLowerCase()] ?? 0),
+    );
   }
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useToken } from '../context/TokenContext';
 import { useUser } from '../context/UserContext';
 
@@ -16,41 +16,53 @@ function decodeJwt(token: string): { sub: number; username: string; role: string
 export default function LoginScreen() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [notification, setNotification] = useState<{ text: string; type: 'error' | 'success' } | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
   const { setToken } = useToken();
   const { setUser } = useUser();
 
+  // ✅ Show success notification if redirected from signup
+  const fromSignup = location.state?.fromSignup;
+  if (fromSignup && !notification) {
+    setNotification({ text: 'New user created', type: 'success' });
+    navigate(location.pathname, { replace: true, state: {} });
+  }
+
   const handleLogin = async () => {
-    const res = await fetch('http://localhost:3000/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
-    });
-
-    if (!res.ok) {
-      const error = await res.json();
-      console.error('Login failed:', error.message || 'Unknown error');
-      return;
-    }
-
-    const data = await res.json();
-    const token = data.access_token;
-
-    const isValidJwt = token && token.split('.').length === 3;
-    if (isValidJwt) {
-      localStorage.setItem('access_token', token);
-      setToken(token);
-
-      const claims = decodeJwt(token);
-      setUser({
-        id: claims.sub,
-        username: claims.username,
-        role: claims.role,
+    try {
+      const res = await fetch('http://localhost:3000/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
       });
 
-      navigate('/dashboard');
-    } else {
-      console.error('Invalid token format:', token);
+      if (!res.ok) {
+        setNotification({ text: 'Incorrect username or password, please try again.', type: 'error' });
+        return;
+      }
+
+      const data = await res.json();
+      const token = data.access_token;
+
+      const isValidJwt = token && token.split('.').length === 3;
+      if (isValidJwt) {
+        localStorage.setItem('access_token', token);
+        setToken(token);
+
+        const claims = decodeJwt(token);
+        setUser({
+          id: claims.sub,
+          username: claims.username,
+          role: claims.role,
+        });
+
+        navigate('/dashboard');
+      } else {
+        setNotification({ text: 'Invalid token received.', type: 'error' });
+      }
+    } catch {
+      setNotification({ text: 'Network error. Please try again.', type: 'error' });
     }
   };
 
@@ -66,8 +78,14 @@ export default function LoginScreen() {
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
+        position: 'relative',
       }}
     >
+      {/* 🔔 Notification Banner */}
+      {notification && (
+        <div className={`notification ${notification.type}`}>{notification.text}</div>
+      )}
+
       <div
         style={{
           width: '100%',
@@ -90,10 +108,11 @@ export default function LoginScreen() {
         >
           Sign In
         </h2>
+
         <input
           placeholder="Username"
           value={username}
-          onChange={e => setUsername(e.target.value)}
+          onChange={(e) => setUsername(e.target.value)}
           style={{
             width: '100%',
             marginBottom: '1rem',
@@ -105,11 +124,12 @@ export default function LoginScreen() {
             fontFamily: 'inherit',
           }}
         />
+
         <input
           placeholder="Password"
           type="password"
           value={password}
-          onChange={e => setPassword(e.target.value)}
+          onChange={(e) => setPassword(e.target.value)}
           style={{
             width: '100%',
             marginBottom: '1.5rem',
@@ -121,6 +141,7 @@ export default function LoginScreen() {
             fontFamily: 'inherit',
           }}
         />
+
         <button
           onClick={handleLogin}
           style={{
