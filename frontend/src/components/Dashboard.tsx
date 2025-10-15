@@ -74,7 +74,7 @@ export default function Dashboard() {
         const tJson = await tRes.json();
         const uJson = await uRes.json();
         if (Array.isArray(tJson)) {
-          setTasks([...tJson].sort((a, b) => (b.id - a.id)));
+          setTasks([...tJson].sort((a, b) => b.id - a.id));
         }
         if (Array.isArray(uJson)) {
           setUsers(uJson);
@@ -84,8 +84,7 @@ export default function Dashboard() {
       }
     })();
   }, [token]);
-
-  // Filters
+    // Filters
   const filteredTasks = useMemo(() => {
     let list = tasks;
     if (filterStatus) {
@@ -137,10 +136,15 @@ export default function Dashboard() {
   // Show Save only if any draft has text
   const showSaveButton = drafts.some(d => d.title.trim().length > 0);
 
-    // Inline edit handlers
+  // Inline edit handlers
   const handleEditChange = (id: number, value: string) => {
     setEditingTitle(value);
     setTasks(prev => prev.map(t => (t.id === id ? { ...t, title: value } : t)));
+  };
+
+  const canEditStatus = (task: Task) => {
+    const isOwner = task.assignedTo?.id === user?.id;
+    return isAdmin || isOwner;
   };
 
   const handleEditBlur = async (task: Task) => {
@@ -151,15 +155,14 @@ export default function Dashboard() {
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         title: editingTitle,
-        status: editingStatus,
+        status: canEditStatus(task) ? editingStatus : task.status,
         ...(isAdmin && editingAssignedToId != null
           ? { assignedToId: editingAssignedToId }
           : {}),
       }),
     });
   };
-
-  return (
+    return (
     <div
       style={{
         width: '100vw',
@@ -228,14 +231,27 @@ export default function Dashboard() {
           <button onClick={addDraft} style={{ height: '2.5rem', width: '2.5rem' }}>
             +
           </button>
-          <button onClick={handleLogout} style={{ height: '2.5rem' }}>
+          <button
+            onClick={handleLogout}
+            style={{
+              height: '2.5rem',
+              padding: '0 1rem',
+              backgroundColor: '#f2f2f7',
+              color: '#333',
+              border: '1px solid #ccc',
+              borderRadius: '12px',
+              fontSize: '1rem',
+              fontFamily: 'inherit',
+              cursor: 'pointer',
+            }}
+          >
             Log Out
           </button>
         </div>
       </div>
 
       {/* Board */}
-            <div
+      <div
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(3, 1fr)',
@@ -338,22 +354,28 @@ export default function Dashboard() {
                           autoFocus
                           style={{ ...selectStyle, backgroundColor: '#f2f2f7' }}
                         />
-                        <select
-                          value={editingStatus}
-                          onChange={e => setEditingStatus(e.target.value as Task['status'])}
-                          style={selectStyle}
-                        >
-                          {STATUSES.map(s => (
-                            <option key={s} value={s}>
-                              {s}
-                            </option>
-                          ))}
-                        </select>
-                        {isAdmin && (
+                        {isAdmin || task.assignedTo?.id === user?.id ? (
+                          <select
+                            value={editingStatus}
+                            onChange={e => setEditingStatus(e.target.value as Task['status'])}
+                            style={selectStyle}
+                          >
+                            {STATUSES.map(s => (
+                              <option key={s} value={s}>
+                                {s}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <p>Status: {task.status}</p>
+                        )}
+                        {isAdmin ? (
                           <select
                             value={editingAssignedToId ?? ''}
                             onChange={e =>
-                              setEditingAssignedToId(e.target.value ? +e.target.value : undefined)
+                              setEditingAssignedToId(
+                                e.target.value ? +e.target.value : undefined,
+                              )
                             }
                             style={selectStyle}
                           >
@@ -364,6 +386,8 @@ export default function Dashboard() {
                               </option>
                             ))}
                           </select>
+                        ) : (
+                          <p>Assigned to: {task.assignedTo?.username ?? 'Unassigned'}</p>
                         )}
                       </div>
                     ) : (

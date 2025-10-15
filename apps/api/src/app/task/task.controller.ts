@@ -12,7 +12,7 @@ import { CreateTaskDto } from './dto/create-task.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UsersService } from '../user/users.service';
 
-@Controller('tasks') 
+@Controller('tasks')
 export class TaskController {
   constructor(
     private taskService: TaskService,

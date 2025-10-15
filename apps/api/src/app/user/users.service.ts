@@ -26,7 +26,7 @@ export class UsersService {
     return this.userRepo.findOne({ where: { id } });
   }
 
-  async create(user: { username: string; password: string; role: string }) {
+  async create(user: { username: string; password: string; role?: string }) {
     const exists = await this.userRepo.findOne({ where: { username: user.username } });
     if (exists) {
       throw new BadRequestException('Username already exists');
@@ -37,6 +37,7 @@ export class UsersService {
     const newUser = this.userRepo.create({
       username: user.username,
       password: hashedPassword,
+      // force default to viewer unless explicitly admin
       role: user.role?.toLowerCase() === 'admin' ? UserRole.ADMIN : UserRole.VIEWER,
     });
 

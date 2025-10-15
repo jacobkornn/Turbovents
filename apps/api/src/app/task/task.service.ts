@@ -17,18 +17,15 @@ export class TaskService {
     private usersService: UsersService,
   ) {}
 
+  /**
+   * Return every task for any logged-in user.
+   */
   async getScopedTasks(user: Partial<User>): Promise<Task[]> {
-    const query = this.taskRepo.createQueryBuilder('task')
+    return this.taskRepo
+      .createQueryBuilder('task')
       .leftJoinAndSelect('task.owner', 'owner')
-      .leftJoinAndSelect('task.assignedTo', 'assignedTo');
-
-
-    if (user.role === 'owner') {
-      return query.getMany();
-    }
-
-    return query
-      .where('task.assignedToId = :userId OR task.ownerId = :userId', { userId: user.id })
+      .leftJoinAndSelect('task.assignedTo', 'assignedTo')
+      .orderBy('task.id', 'DESC')
       .getMany();
   }
 
