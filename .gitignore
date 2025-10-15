@@ -9,7 +9,7 @@ tmp
 out-tsc
 
 # dependencies
-/apps/frontend/node_moduels
+/apps/frontend/node_modules
 node_modules
 
 # IDEs and editors
