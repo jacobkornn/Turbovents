@@ -17,7 +17,7 @@ type User = {
 };
 
 type Draft = {
-  id: string; // local-only id
+  id: string;
   title: string;
   status: Task['status'];
   assignedToId?: number;
@@ -30,23 +30,40 @@ export default function Dashboard() {
   const { user } = useUser();
   const navigate = useNavigate();
 
-  const isAdmin = user?.role === 'admin';
+  // Normalize admin check
+  const isAdmin = user?.role?.toLowerCase() === 'admin';
 
+  // Shared style for all selects
+  const selectStyle = {
+    width: '100%',
+    padding: '0.5rem 0.75rem',
+    borderRadius: '12px',
+    border: '1px solid #ccc',
+    backgroundColor: 'white',
+    fontSize: '0.95rem',
+    fontFamily: 'inherit' as const,
+    marginBottom: '0.6rem',
+  };
+
+  // Data state
   const [tasks, setTasks] = useState<Task[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [filterStatus, setFilterStatus] = useState<string>('');
   const [filterUser, setFilterUser] = useState<string>('');
-
-  // Multiple drafts that stack newest-first
   const [drafts, setDrafts] = useState<Draft[]>([]);
 
-  // Load tasks and users
+  // Edit mode state
+  const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
+  const [editingTitle, setEditingTitle] = useState<string>('');
+  const [editingStatus, setEditingStatus] = useState<Task['status']>('To Do');
+  const [editingAssignedToId, setEditingAssignedToId] = useState<number>();
+
+  // Load tasks & users
   useEffect(() => {
     if (!token) return;
-
-    const load = async () => {
+    (async () => {
       try {
-        const [tasksRes, usersRes] = await Promise.all([
+        const [tRes, uRes] = await Promise.all([
           fetch('http://localhost:3000/api/tasks', {
             headers: { Authorization: `Bearer ${token}` },
           }),
@@ -54,109 +71,62 @@ export default function Dashboard() {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
-
-        const tasksJson = await tasksRes.json();
-        const usersJson = await usersRes.json();
-
-        if (Array.isArray(tasksJson)) {
-          // Show newest first; fall back to id ordering
-          const sorted = [...tasksJson].sort((a: Task, b: Task) => (b.id ?? 0) - (a.id ?? 0));
-          setTasks(sorted);
-        } else {
-          setTasks([]);
+        const tJson = await tRes.json();
+        const uJson = await uRes.json();
+        if (Array.isArray(tJson)) {
+          setTasks([...tJson].sort((a, b) => (b.id - a.id)));
         }
-
-        if (Array.isArray(usersJson)) {
-          setUsers(usersJson);
-        } else {
-          setUsers([]);
+        if (Array.isArray(uJson)) {
+          setUsers(uJson);
         }
       } catch (e) {
-        console.error('Failed to load data:', e);
+        console.error(e);
       }
-    };
-
-    load();
+    })();
   }, [token]);
 
   // Filters
   const filteredTasks = useMemo(() => {
-    let t = tasks;
-    if (filterStatus) t = t.filter(task => task.status === filterStatus);
-    if (filterUser) t = t.filter(task => task.assignedTo?.username === filterUser);
-    return t;
+    let list = tasks;
+    if (filterStatus) {
+      list = list.filter(t => t.status === filterStatus);
+    }
+    if (filterUser) {
+      list = list.filter(t => t.assignedTo?.username === filterUser);
+    }
+    return list;
   }, [tasks, filterStatus, filterUser]);
 
-  // Add a new draft at the top of "To Do"
+  // Draft helpers
   const addDraft = () => {
-    const newDraft: Draft = {
-      id: cryptoRandomId(),
-      title: '',
-      status: 'To Do',
-      assignedToId: undefined,
-    };
-    setDrafts(prev => [newDraft, ...prev]);
+    setDrafts(prev => [
+      { id: cryptoRandomId(), title: '', status: 'To Do', assignedToId: undefined },
+      ...prev,
+    ]);
   };
-
-  // Update a specific draft field
-  const updateDraft = (id: string, patch: Partial<Draft>) => {
+  const updateDraft = (id: string, patch: Partial<Draft>) =>
     setDrafts(prev => prev.map(d => (d.id === id ? { ...d, ...patch } : d)));
-  };
 
-  // Save all drafts to DB
+  // Save drafts
   const saveAllDrafts = async () => {
-    if (!token || drafts.length === 0) return;
-
-    // Only save drafts with non-empty titles
-    const toSave = drafts.filter(d => d.title.trim().length > 0);
-    if (toSave.length === 0) return;
-
-    try {
-      for (const d of toSave) {
-        const payload: any = {
-          title: d.title.trim(),
-          status: d.status,
-        };
-        if (isAdmin && d.assignedToId) {
-          // Backend expects assignedTo? If it's userId, adjust name as needed
-          payload.assignedTo = d.assignedToId;
-        }
-
-        const res = await fetch('http://localhost:3000/api/tasks', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload),
-        });
-
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          console.error('Task creation failed:', err);
-          continue;
-        }
-      }
-
-      // Refresh tasks from DB to show authoritative latest data
-      try {
-        const tasksRes = await fetch('http://localhost:3000/api/tasks', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const tasksJson = await tasksRes.json();
-        if (Array.isArray(tasksJson)) {
-          const sorted = [...tasksJson].sort((a: Task, b: Task) => (b.id ?? 0) - (a.id ?? 0));
-          setTasks(sorted);
-        }
-      } catch (e) {
-        console.error('Failed to reload tasks after save:', e);
-      }
-
-      // Clear drafts after save
-      setDrafts([]);
-    } catch (e) {
-      console.error('Save drafts error:', e);
+    if (!token) return;
+    const toSave = drafts.filter(d => d.title.trim());
+    for (const d of toSave) {
+      const p: any = { title: d.title.trim(), status: d.status };
+      if (isAdmin && d.assignedToId) p.assignedTo = d.assignedToId;
+      await fetch('http://localhost:3000/api/tasks', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(p),
+      });
     }
+    // reload tasks
+    const res = await fetch('http://localhost:3000/api/tasks', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const arr = await res.json();
+    if (Array.isArray(arr)) setTasks(arr.sort((a, b) => b.id - a.id));
+    setDrafts([]);
   };
 
   const handleLogout = () => {
@@ -164,10 +134,32 @@ export default function Dashboard() {
     navigate('/');
   };
 
-  // Show Save button only if any draft has a non-empty title
+  // Show Save only if any draft has text
   const showSaveButton = drafts.some(d => d.title.trim().length > 0);
 
-    return (
+    // Inline edit handlers
+  const handleEditChange = (id: number, value: string) => {
+    setEditingTitle(value);
+    setTasks(prev => prev.map(t => (t.id === id ? { ...t, title: value } : t)));
+  };
+
+  const handleEditBlur = async (task: Task) => {
+    setEditingTaskId(null);
+    if (!token) return;
+    await fetch(`http://localhost:3000/api/tasks/${task.id}`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: editingTitle,
+        status: editingStatus,
+        ...(isAdmin && editingAssignedToId != null
+          ? { assignedToId: editingAssignedToId }
+          : {}),
+      }),
+    });
+  };
+
+  return (
     <div
       style={{
         width: '100vw',
@@ -179,29 +171,20 @@ export default function Dashboard() {
           '-apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif',
       }}
     >
-      {/* Top bar with filters (not flush to top) */}
+      {/* Top bar */}
       <div
         style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginTop: '0.5rem',
           marginBottom: '1.5rem',
         }}
       >
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-          {/* Status filter */}
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
           <select
             value={filterStatus}
             onChange={e => setFilterStatus(e.target.value)}
-            style={{
-              padding: '0.5rem 0.75rem',
-              borderRadius: '12px',
-              border: '1px solid #ccc',
-              backgroundColor: 'white',
-              fontSize: '0.95rem',
-              fontFamily: 'inherit',
-            }}
+            style={selectStyle}
           >
             <option value="">All Statuses</option>
             {STATUSES.map(s => (
@@ -211,18 +194,10 @@ export default function Dashboard() {
             ))}
           </select>
 
-          {/* User filter */}
           <select
             value={filterUser}
             onChange={e => setFilterUser(e.target.value)}
-            style={{
-              padding: '0.5rem 0.75rem',
-              borderRadius: '12px',
-              border: '1px solid #ccc',
-              backgroundColor: 'white',
-              fontSize: '0.95rem',
-              fontFamily: 'inherit',
-            }}
+            style={selectStyle}
           >
             <option value="">All Users</option>
             {users.map(u => (
@@ -233,7 +208,7 @@ export default function Dashboard() {
           </select>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
           {showSaveButton && (
             <button
               onClick={saveAllDrafts}
@@ -241,10 +216,8 @@ export default function Dashboard() {
                 height: '2.5rem',
                 padding: '0 1rem',
                 borderRadius: '12px',
-                backgroundColor: '#007aff', // blue
+                backgroundColor: '#007aff',
                 color: 'white',
-                fontSize: '1rem',
-                fontFamily: 'inherit',
                 border: 'none',
                 cursor: 'pointer',
               }}
@@ -252,73 +225,38 @@ export default function Dashboard() {
               Save
             </button>
           )}
-
-          <button
-            onClick={addDraft}
-            style={{
-              height: '2.5rem',
-              width: '2.5rem',
-              borderRadius: '12px',
-              backgroundColor: '#8e8e93', // grey
-              color: 'white',
-              fontSize: '1.5rem',
-              fontFamily: 'inherit',
-              border: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-            aria-label="Add task"
-            title="Add task"
-          >
+          <button onClick={addDraft} style={{ height: '2.5rem', width: '2.5rem' }}>
             +
           </button>
-
-          <button
-            onClick={handleLogout}
-            style={{
-              height: '2.5rem',
-              padding: '0 1rem',
-              borderRadius: '12px',
-              border: '1px solid #ccc',
-              backgroundColor: '#e0e0e0', // grey
-              color: '#1c1c1e',
-              fontSize: '1rem',
-              fontFamily: 'inherit',
-              cursor: 'pointer',
-            }}
-          >
+          <button onClick={handleLogout} style={{ height: '2.5rem' }}>
             Log Out
           </button>
         </div>
       </div>
 
       {/* Board */}
-      <div
+            <div
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(3, 1fr)',
           gap: '1.5rem',
-          width: '100%',
-          boxSizing: 'border-box',
         }}
       >
         {STATUSES.map(status => (
           <div key={status}>
             <h3
               style={{
+                textAlign: 'center',
                 marginBottom: '0.75rem',
                 fontSize: '1.15rem',
                 fontWeight: 600,
-                color: '#111',
               }}
             >
               {status}
             </h3>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {/* Drafts appear in their current column based on status */}
+              {/* Drafts */}
               {drafts
                 .filter(d => d.status === status)
                 .map(draft => (
@@ -329,42 +267,20 @@ export default function Dashboard() {
                       borderRadius: '16px',
                       boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
                       padding: '0.9rem',
-                      border: '1px solid #eee',
                     }}
                   >
-                    {/* Title input */}
                     <input
                       value={draft.title}
                       onChange={e => updateDraft(draft.id, { title: e.target.value })}
                       placeholder="Enter task title..."
-                      style={{
-                        width: '100%',
-                        padding: '0.65rem 0.8rem',
-                        borderRadius: '12px',
-                        border: '1px solid #ccc',
-                        fontSize: '0.95rem',
-                        fontFamily: 'inherit',
-                        backgroundColor: '#f2f2f7',
-                        marginBottom: '0.6rem',
-                      }}
+                      style={{ ...selectStyle, backgroundColor: '#f2f2f7' }}
                     />
-
-                    {/* Status dropdown (default To Do) */}
                     <select
                       value={draft.status}
                       onChange={e =>
                         updateDraft(draft.id, { status: e.target.value as Draft['status'] })
                       }
-                      style={{
-                        width: '100%',
-                        padding: '0.5rem 0.75rem',
-                        borderRadius: '12px',
-                        border: '1px solid #ccc',
-                        backgroundColor: 'white',
-                        fontSize: '0.95rem',
-                        fontFamily: 'inherit',
-                        marginBottom: isAdmin ? '0.6rem' : 0,
-                      }}
+                      style={selectStyle}
                     >
                       {STATUSES.map(s => (
                         <option key={s} value={s}>
@@ -372,27 +288,15 @@ export default function Dashboard() {
                         </option>
                       ))}
                     </select>
-
-                    {/* Assignee dropdown only for admin */}
                     {isAdmin && (
                       <select
                         value={draft.assignedToId ?? ''}
                         onChange={e =>
                           updateDraft(draft.id, {
-                            assignedToId: e.target.value
-                              ? parseInt(e.target.value, 10)
-                              : undefined,
+                            assignedToId: e.target.value ? +e.target.value : undefined,
                           })
                         }
-                        style={{
-                          width: '100%',
-                          padding: '0.5rem 0.75rem',
-                          borderRadius: '12px',
-                          border: '1px solid #ccc',
-                          backgroundColor: 'white',
-                          fontSize: '0.95rem',
-                          fontFamily: 'inherit',
-                        }}
+                        style={selectStyle}
                       >
                         <option value="">Unassigned</option>
                         {users.map(u => (
@@ -405,7 +309,7 @@ export default function Dashboard() {
                   </div>
                 ))}
 
-              {/* Existing tasks (filtered), newest on top */}
+              {/* Existing Tasks */}
               {filteredTasks
                 .filter(t => t.status === status)
                 .map(task => (
@@ -416,35 +320,61 @@ export default function Dashboard() {
                       borderRadius: '16px',
                       boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
                       padding: '0.9rem',
-                      border: '1px solid #eee',
+                    }}
+                    onDoubleClick={() => {
+                      setEditingTaskId(task.id);
+                      setEditingTitle(task.title);
+                      setEditingStatus(task.status);
+                      setEditingAssignedToId(task.assignedTo?.id);
                     }}
                   >
-                    <h4
-                      style={{
-                        marginBottom: '0.4rem',
-                        fontSize: '1rem',
-                        fontWeight: 500,
-                        color: '#222',
-                      }}
-                    >
-                      {task.title}
-                    </h4>
-                    <p
-                      style={{
-                        fontSize: '0.85rem',
-                        color: '#555',
-                      }}
-                    >
-                      Status: {task.status}
-                    </p>
-                    <p
-                      style={{
-                        fontSize: '0.85rem',
-                        color: '#555',
-                      }}
-                    >
-                      Assigned to: {task.assignedTo?.username || 'Unassigned'}
-                    </p>
+                    {editingTaskId === task.id ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        <input
+                          type="text"
+                          value={editingTitle}
+                          onChange={e => handleEditChange(task.id, e.target.value)}
+                          onBlur={() => handleEditBlur(task)}
+                          autoFocus
+                          style={{ ...selectStyle, backgroundColor: '#f2f2f7' }}
+                        />
+                        <select
+                          value={editingStatus}
+                          onChange={e => setEditingStatus(e.target.value as Task['status'])}
+                          style={selectStyle}
+                        >
+                          {STATUSES.map(s => (
+                            <option key={s} value={s}>
+                              {s}
+                            </option>
+                          ))}
+                        </select>
+                        {isAdmin && (
+                          <select
+                            value={editingAssignedToId ?? ''}
+                            onChange={e =>
+                              setEditingAssignedToId(e.target.value ? +e.target.value : undefined)
+                            }
+                            style={selectStyle}
+                          >
+                            <option value="">Unassigned</option>
+                            {users.map(u => (
+                              <option key={u.id} value={u.id}>
+                                {u.username}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+                    ) : (
+                      <>
+                        <h4 style={{ marginBottom: '0.4rem', fontSize: '1rem' }}>
+                          {task.title}
+                        </h4>
+                        <p>Status: {task.status}</p>
+                        <p>Assigned to: {task.assignedTo?.username ?? 'Unassigned'}</p>
+                      </>
+                    )}
                   </div>
                 ))}
             </div>
@@ -455,11 +385,7 @@ export default function Dashboard() {
   );
 }
 
-/** Simple crypto-safe-ish random id for drafts */
+// Utility for draft IDs
 function cryptoRandomId() {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-    // @ts-ignore
-    return crypto.randomUUID();
-  }
-  return 'd_' + Math.random().toString(36).slice(2);
+  return crypto.randomUUID?.() ?? 'd_' + Math.random().toString(36).slice(2);
 }
