@@ -32,7 +32,7 @@ export class Task {
   @Column({ type: 'varchar', default: 'medium' })
   priority: TaskPriority;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'datetime', nullable: true })
   dueDate: Date;
 
   @ManyToOne(() => User, { nullable: true })

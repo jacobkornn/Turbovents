@@ -1,6 +1,7 @@
 import {
   Controller,
   Post,
+  Get,
   Body,
   UseGuards,
   Req,
@@ -11,7 +12,7 @@ import { CreateTaskDto } from './dto/create-task.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UsersService } from '../user/users.service';
 
-@Controller('tasks')
+@Controller('tasks') 
 export class TaskController {
   constructor(
     private taskService: TaskService,
@@ -19,16 +20,18 @@ export class TaskController {
   ) {}
 
   @UseGuards(JwtAuthGuard)
+  @Get()
+  async findAll(@Req() req) {
+    const user = await this.usersService.findById(req.user.sub);
+    if (!user) throw new UnauthorizedException('User not found');
+    return this.taskService.getScopedTasks(user);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Post()
   async create(@Body() dto: CreateTaskDto, @Req() req) {
-    console.log('Incoming DTO:', dto);
-    console.log('User from JWT:', req.user);
-
     const user = await this.usersService.findById(req.user.sub);
-    if (!user) {
-      throw new UnauthorizedException('User not found');
-    }
-
-    return await this.taskService.createTask(dto, user);
+    if (!user) throw new UnauthorizedException('User not found');
+    return this.taskService.createTask(dto, user);
   }
 }

@@ -14,7 +14,7 @@ export enum UserRole {
   OWNER = 'owner',
 }
 
-@Entity()
+@Entity('users') 
 export class User {
   @PrimaryGeneratedColumn()
   id: number;
@@ -25,7 +25,11 @@ export class User {
   @Column()
   password: string;
 
-  @Column({ type: 'enum', enum: UserRole, default: UserRole.VIEWER })
+  @Column({
+    type: 'varchar',
+    enum: UserRole,
+    default: UserRole.VIEWER,
+  })
   role: UserRole;
 
   // @ManyToOne(() => Organization, org => org.users)

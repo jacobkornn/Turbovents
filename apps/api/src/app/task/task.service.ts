@@ -14,14 +14,14 @@ export class TaskService {
   constructor(
     @InjectRepository(Task)
     private taskRepo: Repository<Task>,
-    private usersService: UsersService, // ✅ Injected cleanly
+    private usersService: UsersService,
   ) {}
 
   async getScopedTasks(user: Partial<User>): Promise<Task[]> {
     const query = this.taskRepo.createQueryBuilder('task')
       .leftJoinAndSelect('task.owner', 'owner')
-      .leftJoinAndSelect('task.assignedTo', 'assignedTo')
-      .leftJoinAndSelect('task.organization', 'org');
+      .leftJoinAndSelect('task.assignedTo', 'assignedTo');
+
 
     if (user.role === 'owner') {
       return query.getMany();

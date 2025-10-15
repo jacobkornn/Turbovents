@@ -3,16 +3,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Task } from './task.entity';
 import { TaskService } from './task.service';
 import { TaskController } from './task.controller';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { UsersModule } from '../user/users.module'; 
-import { User } from '../user/user.entity';
+import { UsersModule } from '../user/users.module';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Task, User]),
-    UsersModule, // ✅ Add this to make UsersService available
-  ],
-  providers: [TaskService, JwtAuthGuard],
+  imports: [TypeOrmModule.forFeature([Task]), UsersModule],
+  providers: [TaskService],
   controllers: [TaskController],
 })
 export class TaskModule {}
