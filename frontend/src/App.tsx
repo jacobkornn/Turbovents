@@ -1,10 +1,8 @@
-import { useState } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import LoginScreen from './components/LoginScreen';
 import Dashboard from './components/Dashboard';
 
 function App() {
-  const [, setToken] = useState('');
 
   return (
     <div style={{
@@ -16,7 +14,7 @@ function App() {
       alignItems: 'center'
     }}>
       <Routes>
-        <Route path="/" element={<LoginScreen setToken={setToken} />} />
+        <Route path="/" element={<LoginScreen />} />
         <Route path="/dashboard" element={<Dashboard />} />
       </Routes>
     </div>

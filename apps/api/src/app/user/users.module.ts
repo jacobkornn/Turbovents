@@ -4,9 +4,9 @@ import { UsersController } from './users.controller';
 import { SeedAdminService } from './seed-admin.service';
 import { PromoteRoleController } from './promote-role.controller';
 
-
 @Module({
   providers: [UsersService, SeedAdminService],
   controllers: [UsersController, PromoteRoleController],
+  exports: [UsersService], 
 })
 export class UsersModule {}

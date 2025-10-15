@@ -5,10 +5,14 @@ import {
   ManyToOne,
   OneToMany,
 } from 'typeorm';
-//import { Organization } from '../organization/organization.entity';
+// import { Organization } from '../organization/organization.entity';
 import { Task } from '../task/task.entity';
 
-export type UserRole = 'viewer' | 'admin' | 'owner';
+export enum UserRole {
+  VIEWER = 'viewer',
+  ADMIN = 'admin',
+  OWNER = 'owner',
+}
 
 @Entity()
 export class User {
@@ -21,11 +25,11 @@ export class User {
   @Column()
   password: string;
 
-  @Column({ type: 'varchar', default: 'viewer' })
+  @Column({ type: 'enum', enum: UserRole, default: UserRole.VIEWER })
   role: UserRole;
 
-//   @ManyToOne(() => Organization, org => org.users)
-//   organization: Organization;
+  // @ManyToOne(() => Organization, org => org.users)
+  // organization: Organization;
 
   @OneToMany(() => Task, task => task.owner)
   tasksOwned: Task[];

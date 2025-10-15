@@ -1,19 +1,34 @@
-import { Controller, Get, Req, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  UseGuards,
+  Req,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { TaskService } from './task.service';
+import { CreateTaskDto } from './dto/create-task.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/roles.guard';
-import { Request } from 'express';
-import { User } from '../user/user.entity';
-
+import { UsersService } from '../user/users.service';
 
 @Controller('tasks')
-@UseGuards(JwtAuthGuard, RolesGuard)
 export class TaskController {
-  constructor(private readonly taskService: TaskService) {}
+  constructor(
+    private taskService: TaskService,
+    private usersService: UsersService,
+  ) {}
 
-  @Get()
-  async getTasks(@Req() req: Request) {
-    const user = req.user as User;
-    return this.taskService.getScopedTasks(user);
+  @UseGuards(JwtAuthGuard)
+  @Post()
+  async create(@Body() dto: CreateTaskDto, @Req() req) {
+    console.log('Incoming DTO:', dto);
+    console.log('User from JWT:', req.user);
+
+    const user = await this.usersService.findById(req.user.sub);
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    return await this.taskService.createTask(dto, user);
   }
 }

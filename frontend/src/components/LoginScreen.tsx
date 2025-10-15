@@ -1,17 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useToken } from '../context/TokenContext';
 
-interface LoginScreenProps {
-  setToken: (token: string) => void;
-}
-
-export default function LoginScreen({ setToken }: LoginScreenProps) {
+export default function LoginScreen() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [token, setLocalToken] = useState('');
-  const [profile, setProfile] = useState<{ username: string; role: string } | null>(null);
-  const [users, setUsers] = useState<{ id: number; username: string; role: string }[]>([]);
   const navigate = useNavigate();
+  const { setToken } = useToken();
 
   const handleLogin = async () => {
     const res = await fetch('http://localhost:3000/api/auth/login', {
@@ -20,34 +15,23 @@ export default function LoginScreen({ setToken }: LoginScreenProps) {
       body: JSON.stringify({ username, password }),
     });
 
-    const data = await res.json();
-    if (data.access_token) {
-      setToken(data.access_token);       // Lift to App
-      setLocalToken(data.access_token);  // Store locally
-      setProfile(null);
-      setUsers([]);
-      navigate('/dashboard');
+    if (!res.ok) {
+      const error = await res.json();
+      console.error('Login failed:', error.message || 'Unknown error');
+      return;
     }
-  };
-
-  const handleProfile = async () => {
-    const res = await fetch('http://localhost:3000/api/auth/profile', {
-      method: 'GET',
-      headers: { Authorization: `Bearer ${token}` },
-    });
 
     const data = await res.json();
-    setProfile({ username: data.username, role: data.role });
-  };
+    console.log('Received token:', data.access_token);
 
-  const handleLoadUsers = async () => {
-    const res = await fetch('http://localhost:3000/api/users', {
-      method: 'GET',
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    const data = await res.json();
-    setUsers(data);
+    const isValidJwt = data.access_token && data.access_token.split('.').length === 3;
+    if (isValidJwt) {
+      localStorage.setItem('access_token', data.access_token);
+      setToken(data.access_token);
+      navigate('/dashboard');
+    } else {
+      console.error('Invalid token format:', data.access_token);
+    }
   };
 
   return (
@@ -125,97 +109,6 @@ export default function LoginScreen({ setToken }: LoginScreenProps) {
         >
           Login
         </button>
-
-        {token && (
-          <>
-            <div style={{ marginTop: '1.5rem' }}>
-              <strong>Token:</strong>
-              <pre style={{
-                backgroundColor: '#f0f0f0',
-                padding: '0.5rem',
-                borderRadius: '8px',
-                fontSize: '0.85rem',
-                fontFamily: 'inherit'
-              }}>{token}</pre>
-            </div>
-            <button
-              onClick={handleProfile}
-              style={{
-                marginTop: '1rem',
-                width: '100%',
-                padding: '0.75rem',
-                backgroundColor: '#34c759',
-                color: 'white',
-                border: 'none',
-                borderRadius: '12px',
-                fontSize: '1rem',
-                cursor: 'pointer',
-                fontFamily: 'inherit'
-              }}
-            >
-              Check Profile
-            </button>
-          </>
-        )}
-
-        {profile && (
-          <div style={{ marginTop: '1.5rem' }}>
-            <strong>Logged in as:</strong> {profile.username}<br />
-            <strong>Role:</strong> {profile.role}<br />
-            {profile.role === 'admin' && (
-              <div style={{ marginTop: '1rem', color: 'green' }}>
-                You have admin privileges.
-                <br />
-                <button
-                  onClick={handleLoadUsers}
-                  style={{
-                    marginTop: '0.5rem',
-                    width: '100%',
-                    padding: '0.75rem',
-                    backgroundColor: '#5856d6',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '12px',
-                    fontSize: '1rem',
-                    cursor: 'pointer',
-                    fontFamily: 'inherit'
-                  }}
-                >
-                  Load All Users
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {users.length > 0 && (
-          <div style={{ marginTop: '2rem' }}>
-            <h3 style={{
-              marginBottom: '0.5rem',
-              fontFamily: 'inherit'
-            }}>
-              User List
-            </h3>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'inherit' }}>
-              <thead>
-                <tr>
-                  <th style={{ textAlign: 'left', padding: '0.5rem' }}>ID</th>
-                  <th style={{ textAlign: 'left', padding: '0.5rem' }}>Username</th>
-                  <th style={{ textAlign: 'left', padding: '0.5rem' }}>Role</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map(u => (
-                  <tr key={u.id}>
-                    <td style={{ padding: '0.5rem' }}>{u.id}</td>
-                    <td style={{ padding: '0.5rem' }}>{u.username}</td>
-                    <td style={{ padding: '0.5rem' }}>{u.role}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
       </div>
     </div>
   );
